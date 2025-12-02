@@ -14,3 +14,19 @@ Muutokset: tiivistetty ja mukautettu.
 Ohjelmistotuotanto ja Scrum
 [Osa1](osa1.md)
 
+# Osa 2 tiivistelmä  
+Vaatimustenhallinta
+[Osa2](osa2.md)
+
+
+# Osa 3 tiivistelmä  
+Laadunhallinta
+[Osa3](osa3.md)
+
+# Osa 4 tiivistelmä  
+Ohjelmiston suunnittelu ja DevOps
+[Osa4](osa4.md)
+
+# Osa 5 tiivistelmä
+Lean ja laajan skaalan ketterä
+
