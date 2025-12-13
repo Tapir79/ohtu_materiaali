@@ -605,5 +605,669 @@ Esimerkki:
 ```python
 Tili.luo_euribor_tili(...)
 Tili.luo_maaraaikais_tili(...)
+```
 
-jatka https://ohjelmistotuotanto-hy.github.io/osa4/#riippuvuuksien-v%C3%A4h%C3%A4isyys 
+# Tiivistelmä: Riippuvuuksien vähäisyys ja “Favour Composition Over Inheritance”
+
+## 1. Riippuvuuksien vähäisyys (Low Coupling)
+**Riippuvuuksien vähäisyys** tarkoittaa, että luokat ja oliot ovat mahdollisimman vähän sidoksissa toisiinsa.  
+Tavoitteena on:
+- helpompi testattavuus  
+- pienemmät muutosten vaikutukset  
+- selkeämpi rakenne
+
+Low coupling pyrkii **eliminoimaan tarpeettomat riippuvuudet** erityisesti konkreettisista toteutuksista.
+
+### Yhteys Single Responsibility -periaatteeseen
+Single responsibility → paljon pieniä luokkia → väistämättä jonkin verran riippuvuuksia.  
+Siksi on tärkeää minimoida turhat riippuvuudet ja riippua mieluummin **rajapinnoista** kuin konkreettisista luokista.
+
+---
+
+## 2. Program to an Interface / Depend on Abstractions
+Kaksi samansisältöistä periaatetta:
+
+- **Program to an interface, not to an implementation**
+- **Depend on abstractions, not concrete implementations**
+
+Tämä tarkoittaa:
+- Riippuvuudet pitää kohdistaa siihen, *mitä luokka tekee* (rajapintaan), ei siihen *miten se tekee sen* (toteutus).
+- Pythonissa ei ole muodollista interface-tyyppiä → käytetään **duck typing** – riittää, että olio tarjoaa tarvittavat metodit.
+
+---
+
+## 3. Riippuvuuksien injektointi (Dependency Injection)
+Riippuvuudet annetaan luokalle esim.
+- konstruktorin kautta  
+- metodille argumenttina
+
+Tämä mahdollistaa:
+- testattavuuden (voi antaa testikohteelle feikkitoteutuksen)
+- riippuvuuksien vaihtamisen ilman luokkamuutoksia
+
+Esimerkki: verkkokaupan Varasto, Pankki ja Viitegeneraattori annettiin konstruktorissa.
+
+---
+
+## 4. Favor Composition Over Inheritance
+**Periaate:** Suosi koostamista (composition) perinnän sijaan.
+
+### Miksi?
+- Perintä luo vahvan ja usein jäykän riippuvuuden perivän ja perittävän luokan välille.
+- Jos toiminnallisuus on jaettava useaan “luokkatyyppiin”, perintä johtaa helposti hankalaan luokkahierarkiaan.
+- Koostaminen (lähettämällä olio toiselle oliolle) on joustavampaa.
+
+---
+
+Hyödyt:
+
+* selkeä ja luettava syntaksi
+* keskitetty logiikka siitä, miten eri tilit rakennetaan
+* ei tarvitse muistaa tarkkaa konstruktorikutsua
+
+
+# Pattern esimerkkejä
+
+## Valo
+
+Tässä esimerkissä havainnollistetaan kolmea suunnittelumallia:
+- Static Factory
+- Strategy Pattern
+- Command Pattern
+
+Kaikki liittyvät valon ohjaamiseen.
+
+---
+
+# Strategy Pattern - tapa käyttää valoa
+
+Strategy-mallissa kapseloidaan vaihtuva toiminnallisuus omaan luokkaansa.
+
+Valon käyttäytyminen voi olla erilaista:
+- normaali valo
+- himmennettävä valo
+
+```python
+class ValoTapa:
+    def kayta(self):
+        pass
+
+
+class NormaaliValo(ValoTapa):
+    def kayta(self):
+        print("Valo on päällä")
+
+
+class HimmennettavaValo(ValoTapa):
+    def kayta(self):
+        print("Valo on päällä himmennettynä")
+
+# Valon strategia - Strategia voidaan vaihtaa ajoaikana.
+class Valo:
+    def __init__(self, tapa):
+        self.tapa = tapa
+
+    def sytyta(self):
+        self.tapa.kayta()
+
+```
+
+# Static Factory – miten valo luodaan
+
+Static factory vastaa oikean olion luomisesta.
+
+```python
+class ValoTehdas:
+    @staticmethod
+    def luo(tyyppi):
+        if tyyppi == "normaali":
+            return Valo(NormaaliValo())
+        elif tyyppi == "himmennettava":
+            return Valo(HimmennettavaValo())
+```
+
+
+
+
+# Command Pattern – mitä tehdään valolle
+
+Command-mallissa jokainen komento on oma luokkansa.
+
+```python
+class Komento:
+    def suorita(self):
+        pass
+
+
+class SytytaKomento(Komento):
+    def __init__(self, valo):
+        self.valo = valo
+
+    def suorita(self):
+        self.valo.sytyta()
+```
+
+
+Koodin käyttäminen. Olion luontilogiikka on keskitetty yhteen paikkaan.
+Toiminto (komento) on irrotettu siitä, kuka sitä kutsuu:         
+
+```python
+valo_himmea = ValoTehdas.luo("himmennettava")
+valo_himmea.sytyta()
+
+
+valo_normaali = ValoTehdas.luo("normaali")
+komento = SytytaKomento(valo_normaali)
+komento.suorita()
+
+```
+
+## Yhteenveto
+
+| Malli           | Mitä ratkaisee        |
+|-----------------|-----------------------|
+| Strategy        | Miten valo toimii     |
+| Static Factory  | Miten valo luodaan    |
+| Command         | Mitä valolle tehdään  |
+
+---
+
+# Template method   
+
+Template method -suunnittelumallia käytetään, kun
+useiden toimintojen suoritus on lähes sama ja eroaa vain
+yhdessä tai muutamassa vaiheessa.
+
+## Esimerkki: juoman valmistus
+
+Kaikki juomat valmistetaan näin:
+1. Kiehauta vesi
+2. Valmista juoma (vaihtelee)
+3. Kaada kuppiin
+
+Vain vaihe 2 eroaa.      
+Metodi valmista on template method. 
+
+## Abstrakti yliluokka (template method)
+
+```python
+from abc import ABC, abstractmethod
+
+class Juoma(ABC):
+
+    def valmista(self):
+        self.kiehauta_vesi()
+        self.valmista_juoma()
+        self.kaada_kuppiin()
+
+    def kiehauta_vesi(self):
+        print("Kiehautetaan vesi")
+
+    def kaada_kuppiin(self):
+        print("Kaadetaan kuppiin")
+
+    @abstractmethod
+    def valmista_juoma(self):
+        pass
+
+
+
+class Kahvi(Juoma):
+    def valmista_juoma(self):
+        print("Lisätään kahvijauhe")
+
+class Tee(Juoma):
+    def valmista_juoma(self):
+        print("Lisätään teepussi")
+
+```
+
+Käyttö:
+
+```pyton
+kahvi = Kahvi()
+kahvi.valmista()
+
+tee = Tee()
+tee.valmista()
+```
+
+## Template Method vs Strategy (lyhyesti)
+
+| Template Method            | Strategy                         |
+|----------------------------|----------------------------------|
+| Perustuu perintään         | Perustuu koostamiseen            |
+| Algoritmin runko kiinteä   | Strategia vaihdettavissa          |
+| Käyttäytyminen pysyy samana| Käyttäytyminen voi vaihtua ajoaikana |
+
+
+
+# Toisteettomuus (DRY – Don’t Repeat Yourself)
+
+Toisteettomuus (redundanssin välttäminen) on keskeinen koodin laatuattribuutti
+kapseloinnin, koheesion ja vähäisten riippuvuuksien ohella.
+
+DRY-periaate (Don’t Repeat Yourself) tarkoittaa, että samaa tietoa tai logiikkaa
+ei tule ilmaista useaan kertaan järjestelmässä.
+
+---
+
+## Ilmeinen toisteisuus: copypaste
+
+Yleisin toisteisuuden muoto on **copypaste**:
+- sama koodinpätkä kopioidaan useaan paikkaan
+- usein helppo poistaa funktioiden tai metodien avulla
+
+Copypaste aiheuttaa ongelmia:
+- virheen korjaus vaatii muutoksia moneen paikkaan
+- muutokset ovat hitaita ja virheherkkiä
+- usein merkki heikosta koheesiosta
+
+---
+
+## Hienovaraisempi toisteisuus
+
+Kaikki toisteisuus ei ole ilmeistä.
+
+Monet **suunnittelumallit** (esim. *Template Method*) pyrkivät poistamaan
+hienovaraisempaa toistoa, kuten:
+- saman suorituslogiikan toistumista eri luokissa
+---
+
+## DRY laajemmassa merkityksessä
+
+Kirjassa *The Pragmatic Programmer* DRY määritellään näin:
+
+> **“Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.”**
+
+Tämä tarkoittaa:
+- jokaisella tiedolla on **yksi totuuden lähde**
+- DRY koskee muutakin kuin koodia
+
+DRY-periaate tulisi ulottaa myös:
+- tietokantaskeemaan
+- testikoodiin
+- konfiguraatioihin
+- build-skripteihin
+
+---
+
+## Single authoritative representation
+
+Single authoritative representation tarkoittaa, että:
+- tietty tieto tai sääntö on kapseloitu yhteen paikkaan
+- muut osat järjestelmää käyttävät sitä epäsuorasti
+
+### Esimerkki: valuutan käsittely
+
+Jos valuutan käsittely:
+- on hajallaan monessa paikassa → muutokset vaikeita
+- on kapseloitu esim. `Money`-luokkaan → muutokset helppoja
+
+Uuden valuutan lisääminen voi tällöin vaatia vain:
+- yhden luokan muokkaamisen
+
+---
+
+## Hyvä vs. paha copypaste
+
+Copypaste ei ole aina automaattisesti huono asia.
+
+### Hyvä copypaste
+- nopea prototyyppi
+- yksinkertainen sovellus
+- refaktorointi ei tuo merkittävää hyötyä
+
+### Huono copypaste
+- toistuu monessa paikassa
+- vaikeuttaa muutoksia
+- kasvattaa monimutkaisuutta ajan myötä
+
+Copypasten poistamisella on myös **hinta**:
+- koodi voi muuttua monimutkaisemmaksi
+- abstraktiot voivat olla turhia pienessä ohjelmassa
+
+---
+
+## Käytännön nyrkkisääntö
+
+**Three strikes and you refactor**:
+- kahdessa paikassa oleva toisto on vielä ok
+- kolmas kopio → refaktorointi kannattaa
+
+Tämä auttaa tasapainottamaan:
+- koodin selkeyttä
+- joustavuutta
+- kehitystyön vaivaa
+
+---
+
+## Yhden kappaleen tiivistys
+
+DRY-periaate pyrkii poistamaan sekä ilmeisen että hienovaraisen toisteisuuden
+koodista ja koko järjestelmästä. Sen ydinajatus on, että jokaisella tiedolla
+tulisi olla yksi selkeä totuuden lähde. Copypaste voi joskus olla hyväksyttävää,
+mutta toistuvan logiikan ilmaantuminen useaan paikkaan on merkki refaktoroinnin
+tarpeesta.
+
+
+
+# Dekoraattori-suunnittelumalli
+
+Dekoraattoria käytetään, kun:
+- halutaan lisätä olioon uusia ominaisuuksia
+- ominaisuuksia voidaan yhdistellä vapaasti
+- perintä johtaisi räjähdysmäiseen luokkamäärään
+
+Ongelma:     
+Asiakas haluaa:
+- kahvi maidolla
+- kahvi sokerilla 
+- kahvi maidolla ja sokerilla
+- kahvi maidolla, sokerilla ja hintarajoituksella
+- ja jatkossa lisää ominaisuuksia...
+
+-> Perinnällä luokkia tulisi valtavasti          
+-> Ratkaisu: dekoraattori
+
+### Dekoraattorin perusidea
+Dekoraattori:
+- sisältää toisen olion
+- delegoi kutsut sille
+- lisää omaa toiminnallisuutta
+---
+
+Jokainen lisäominaisuus on oma luokkansa. 
+Ominaisuuksia voi yhdistellä vapaasti. 
+Ei tarvita luokkia kuten:
+MaitoinenSokerinenBudjettikahvi
+
+## Lähtötilanne: yksinkertainen kahvi
+
+```python
+class Kahvi:
+    def kuvaus(self):
+        return "Kahvi"
+
+    def hinta(self):
+        return 2.0
+
+# maito deokraattori
+class Maitokahvi:
+    def __init__(self, kahvi):
+        self.kahvi = kahvi
+
+    def kuvaus(self):
+        return self.kahvi.kuvaus() + ", maito"
+
+    def hinta(self):
+        return self.kahvi.hinta() + 0.5
+
+# sokeri dekoraattori
+class Sokerikahvi:
+    def __init__(self, kahvi):
+        self.kahvi = kahvi
+
+    def kuvaus(self):
+        return self.kahvi.kuvaus() + ", sokeri"
+
+    def hinta(self):
+        return self.kahvi.hinta() + 0.2
+
+# budjetti dekoraattori
+class Budjettikahvi:
+    def __init__(self, kahvi, maksimi):
+        self.kahvi = kahvi
+        self.maksimi = maksimi
+
+    def kuvaus(self):
+        return self.kahvi.kuvaus()
+
+    def hinta(self):
+        if self.kahvi.hinta() > self.maksimi:
+            raise Exception("Liian kallis kahvi!")
+        return self.kahvi.hinta()
+
+
+perus_kahvi = Kahvi()
+kahvi_maidolla = Maitokahvi(perus_kahvi)
+kahvi_maidolla_sokerilla = Sokerikahvi(kahvi_maidolla)
+kahvi_maidolla_sokerilla_budjetti = Budjettikahvi(kahvi_maidolla_sokerilla , 3.0)
+
+print(kahvi_maidolla_sokerilla_budjetti.kuvaus())
+print(kahvi_maidolla_sokerilla_budjetti.hinta())
+
+### Tulostaa 
+# Kahvi, maito, sokeri
+# 2.7
+```
+
+
+# Rakentaja-suunnittelumalli (Builder)
+
+Rakentaja-mallia käytetään, kun:
+- olion luonti koostuu useista vaiheista
+- halutaan selkeä ja luonnollinen tapa yhdistellä ominaisuuksia
+- konstruktorista ei haluta pitkää ja sekavaa
+
+Tavoitteena rakentaa leipä seuraavasti 
+
+```python
+builder = VoileipaRakentaja()
+
+voileipa = builder.juusto().kinkku().tomaatti().valmis()
+```
+
+Mitä tässä tapahtuu?
+
+Builder:
+
+- pitää sisällään työn alla olevan olion
+
+jokainen metodi:
+- lisää yhden ominaisuuden
+- palauttaa uuden rakentajan
+- Metodeja voi ketjuttaa (method chaining)
+- Rakentaminen muistuttaa luonnollista kieltä
+- on immutable
+---
+
+
+## Lähtötilanne: Voileipä
+
+```python
+class Voileipa:
+    def __init__(self):
+        self.taytteet = []
+
+    def lisaa(self, tayte):
+        self.taytteet.append(tayte)
+
+    def kuvaus(self):
+        return ", ".join(self.taytteet)
+
+class VoileipaRakentaja:
+    def __init__(self, voileipa=None):
+        self.voileipa = voileipa or Voileipa()
+
+    def juusto(self):
+        uusi = VoileipaRakentaja(self.voileipa)
+        uusi.voileipa.lisaa("juusto")
+        return uusi
+
+    def kinkku(self):
+        uusi = VoileipaRakentaja(self.voileipa)
+        uusi.voileipa.lisaa("kinkku")
+        return uusi
+
+    def tomaatti(self):
+        uusi = VoileipaRakentaja(self.voileipa)
+        uusi.voileipa.lisaa("tomaatti")
+        return uusi
+
+    def valmis(self):
+        return self.voileipa
+```
+
+
+
+# Keskeiset käsitteet tiiviisti
+
+| Käsite | Selitys |
+|-------|---------|
+| **Low coupling** | Luokat riippuvat mahdollisimman vähän toisistaan. Parantaa joustavuutta. |
+| **Single responsibility principle** | Luokalla vain yksi vastuualue. |
+| **Program to an interface** | Riipu rajapinnasta, älä toteutuksesta. |
+| **Abstraction over implementation** | Käytä abstraktioita (esim. korkostrategia), älä konkreettisia luokkia. |
+| **Dependency injection** | Riippuvuudet annetaan konstruktorin tai metodin kautta. |
+| **Composition over inheritance** | Suosi koostamista (oliot yhteistyössä), vältä perintäketjuja. |
+| **Koheesio (cohesion)** | Kuinka hyvin luokan sisäiset asiat liittyvät toisiinsa. Korkea koheesio = hyvä. |
+| **Duck typing (Python)** | “Jos se käyttäytyy kuin ankka, se on ankka.” Riittää, että olio tarjoaa tarvittavat metodit. |
+| **Static factory method** | Staattinen tehdasmetodi, joka luo olion ja piilottaa luomislogiikan käyttäjältä. Parantaa kapselointia. |
+| **Kapselointi (encapsulation)** | Olion sisäiset toteutusdetaljit piilotetaan ulkopuolelta. |
+| **Strategy pattern** | Suunnittelumalli, jossa vaihteleva algoritmi (esim. korkolaskenta) eriytetään omaksi oliokseen ja voidaan vaihtaa ajoaikana. |
+| **Command pattern** | Suunnittelumalli, jossa toiminto (komento) kapseloidaan omaksi oliokseen. Mahdollistaa toimintojen irrottamisen kutsujasta, sekä esim. jonotuksen, lokituksen ja perumisen. |
+| **Favour composition over inheritance** | Suosi koostamista perinnän sijaan — yhteistyössä toimivat oliot ovat joustavampia kuin laajat luokkahierarkiat. |
+| **Koostaminen (composition)** | Olion toiminta muodostetaan käyttämällä muita olioita “osina”. |
+| **Dynaaminen käyttäytyminen** | Olion toiminta voidaan muuttaa ohjelman suorituksen aikana, esim. vaihtamalla strategia. |
+| **Konstruktori** | Metodi, joka luo luokan ilmentymän. |
+| **Mock-olio** | Testauksessa käytettävä korvaava olio, joka jäljittelee riippuvuuden toimintaa. |
+| **Vastuunjako (separation of concerns)** | Jokaisella luokalla on selkeä ja yksittäinen vastuualue. |
+| **Tehdasluokka** | Luokka (esim. Pankki), joka on vastuussa olioiden luomisesta ja alustamisesta. |
+
+
+## Suunnittelumallit – vertailu
+
+| Suunnittelumalli | Tyyppi | Mitä ongelmaa ratkaisee | Ydinidea | Tyypillinen esimerkki |
+|------------------|--------|--------------------------|----------|------------------------|
+| **Strategy** | Käyttäytymismalli | Vaihteleva algoritmi / käyttäytyminen | Algoritmi kapseloidaan omaksi oliokseen ja voidaan vaihtaa ajoaikana | Valon toimintatapa (normaali / himmennettävä) |
+| **Command** | Käyttäytymismalli | Toiminnon irrottaminen kutsujasta | Toiminto kapseloidaan omaksi oliokseen | SytytäKomento(valo) |
+| **Template Method** | Käyttäytymismalli | Saman algoritmirungon toisto | Yliluokka määrittää rungon, aliluokat vaihtelevat osia | Kahvin vs teen valmistus |
+| **Decorator** | Rakennemalli | Ominaisuuksien yhdistely ilman perintäräjähdystä | Olio kääritään toiseen olioon, joka lisää toiminnallisuutta | Kahvi + maito + sokeri |
+| **Builder** | Luontimalli | Monivaiheinen ja selkeä olion luonti | Ketjutettavat rakennusvaiheet, lopuksi valmis olio | VoileipäRakentaja |
+| **Static Factory Method** | Luontimalli | Olion luontilogiikan piilottaminen | Staattinen metodi luo ja palauttaa olion | ValoTehdas.luo(...) |
+| **Factory (Factory Method / Simple Factory)** | Luontimalli | Olioiden luomisen keskittäminen | Erillinen tehdas vastaa luomisesta | Tili-tehdas |
+| **Dependency Injection** | Rakennemalli | Tiukat riippuvuudet | Riippuvuudet annetaan olion ulkopuolelta | Pankki annetaan konstruktorissa |
+| **Repository** | Rakennemalli | Tietokantariippuvuuksien eristäminen | Data-access kapseloidaan omaan luokkaan | UserRepository |
+
+
+
+
+# Koodin laatu: tiivistetty yhteenveto
+
+## Testattavuus
+
+Hyvän koodin tärkeä ominaisuus on **testattavuus**:
+- koodi on helppo testata yksikkö- ja integraatiotesteillä
+- seuraa yleensä:
+  - selkeästä vastuunjaosta
+  - löyhästä kytkennästä
+  - vähäisistä riippuvuuksista
+
+Jos koodia on vaikea testata, syy on usein:
+- epäselvät vastuut
+- liialliset riippuvuudet
+
+-> Testattavuutta parannetaan esim. **riippuvuuksien injektoinnilla**.
+
+---
+
+## Selkeys (Clean Code)
+
+Nykyinen ohjelmointityyli korostaa **luettavuutta ja selkeyttä**:
+- koodi kertoo nimien ja rakenteen avulla, mitä se tekee
+- tehokkuus ei enää perustu kryptiseen koodiin
+
+Selkeän koodin merkitys:
+- jopa ~90 % ajasta kuluu koodin lukemiseen
+- koodia luetaan debugatessa ja laajennettaessa
+- oma koodi ei ole enää selkeää kuukausien päästä
+
+-> Selkeä koodi auttaa sekä muita että itseä tulevaisuudessa.
+
+---
+
+## Code smell (koodihaju)
+
+**Code smell** on helposti havaittava merkki siitä,
+että koodissa voi olla rakenteellinen ongelma.
+
+Se ei ole virhe, vaan **oire huonosta sisäisestä laadusta**.
+
+### Tyypillisiä koodihajuja
+- toisteinen koodi
+- liian pitkät metodit
+- liian suuret luokat
+- pitkät parametrilistat
+- epäselvät nimet
+- kommenttien liikakäyttö
+
+Usein nämä liittyvät:
+- huonoon koheesioon
+- single responsibility -periaatteen rikkomiseen
+
+### Vähemmän ilmeisiä koodihajuja
+- **Primitive obsession**  
+  -> käsitteitä (esim. raha, osoite) esitetään primitiivityypeillä
+- **Shotgun surgery**  
+  -> yhden muutoksen tekeminen vaatii muutoksia monessa paikassa  
+  -> merkki huonosta kapseloinnista ja DRY-rikkomuksesta
+
+---
+
+## Refaktorointi
+
+**Refaktorointi** = koodin sisäisen rakenteen parantaminen  
+-> **toiminnallisuus ei muutu**
+
+Keskeiset periaatteet:
+- tehdään pienin askelin
+- testit ajetaan jokaisen muutoksen jälkeen
+- testit ovat lähes välttämättömiä
+
+Tyypillisiä refaktorointeja:
+- Rename variable/method/class
+- Extract method
+- Move method/field
+- Extract superclass
+
+Monimutkaisemmissa tapauksissa:
+- refaktorointi tehdään **suunnittelumallien avulla**
+- ks. *Refactoring to Patterns*
+
+Refaktorointia kannattaa tehdä jatkuvasti, jotta:
+- koodi pysyy laajennettavana
+- tekninen velka ei kasva hallitsemattomaksi
+
+---
+
+## Tekninen velka (Technical Debt)
+
+**Tekninen velka** tarkoittaa huonoa sisäistä laatua,
+joka hidastaa kehitystä tulevaisuudessa.
+
+### Tekninen velka voi olla:
+- tahatonta (osaamattomuus, tietämättömyys)
+- tietoista (aikapaine, MVP)
+
+### Milloin tekninen velka on ok?
+- prototyypit
+- MVP (Minimal Viable Product)
+- markkina- tai rahoituspaine
+
+### Fowler: teknisen velan neljä luokkaa
+1. **Reckless & deliberate**  
+   “Ei ole aikaa suunnittelulle”
+2. **Reckless & inadvertent**  
+   “Mikä on arkkitehtuuri?”
+3. **Prudent & inadvertent**  
+   “Nyt tiedämme miten tämä olisi pitänyt tehdä”
+4. **Prudent & deliberate**  
+   “Julkaistaan nyt, korjataan myöhemmin”
+
+* Luokat 1–2 = huono velka  
+* Luokat 3–4 = harkittu velka
+
+Tekninen velka on kuin laina:
+- oikein mitoitettuna hyödyllinen
+- hallitsemattomana kehitystä lamauttava
