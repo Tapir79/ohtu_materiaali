@@ -119,39 +119,48 @@ class Kurssi:
         return self._hae_palautteet_ehdolla(ArvosanavaliStrategia(x, y))
     
 
-    def printtaa(self, numero):
-        # tulostetaan ilman rivinvaihtoa
-        print(f"{numero}: ", end="")
-        for palaute in self.__palautteet:
-            if palaute["arvosana"] == numero:
-                print("*", end="")
-        print()
-
-
-    def yhteenveto(self):
+    def _laske_keskiarvo(self):
+        """Laskee palautteiden keskiarvon"""
+        if len(self.__palautteet) == 0:
+            return 0
+        summa = sum(palaute["arvosana"] for palaute in self.__palautteet)
+        return summa / len(self.__palautteet)
+    
+    def _tulosta_otsikko(self):
+        """Tulostaa yhteenvedon otsikon"""
         print(f"{self.__nimi}, {self.__vuosi}")
         print("============")
         print("palautteita annettiin", len(self.__palautteet), "kappaletta")
-        
-        x = 0
+    
+    def _tulosta_jakauma_rivi(self, arvosana):
+        """Tulostaa yhden rivin arvosanajakaumasta"""
+        print(f"{arvosana}: ", end="")
         for palaute in self.__palautteet:
-            x += palaute["arvosana"]
-        
-        print("keskiarvo ", x/ len(self.__palautteet))
-
+            if palaute["arvosana"] == arvosana:
+                print("*", end="")
+        print()
+    
+    def _tulosta_jakauma(self):
+        """Tulostaa arvosanajakauman"""
         print()
         print("jakauma")
-    
-        # tulostetaan ilman rivinvaihtoa
         for i in range(5, 0, -1):
-            self.printtaa(i)
-
+            self._tulosta_jakauma_rivi(i)
+    
+    def _tulosta_kommentit(self):
+        """Tulostaa palautteiden kommentit"""
         print()
         print("kommentit")
-                
-        for palaute in self.__palautteet:
-            if len(palaute["kommentti"]) > 0:
-                print("  " + palaute["kommentti"])
+        kommentin_sisaltavat = self.hae_kommentin_sisaltavat_palautteet()
+        for palaute in kommentin_sisaltavat:
+            print("  " + palaute["kommentti"])
+
+    def yhteenveto(self):
+        """Tulostaa kurssipalautteen yhteenvedon"""
+        self._tulosta_otsikko()
+        print("keskiarvo ", self._laske_keskiarvo())
+        self._tulosta_jakauma()
+        self._tulosta_kommentit()
 
 
 
