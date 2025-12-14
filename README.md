@@ -29,4 +29,5 @@ Ohjelmiston suunnittelu ja DevOps
 
 # Osa 5 tiivistelmä
 Lean ja laajan skaalan ketterä
+[Osa5](osa5.md)
 
